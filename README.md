@@ -22,3 +22,13 @@ O **RaloZero** é um dashboard de BI desenvolvido para transformar planilhas fin
 streamlit
 pandas
 plotly
+
+## JEITO CORRETO DE CARREGAR AS PLANILHAS 
+
+Data,Categoria,Tipo,Valor
+01/03/2026,Vendas,Entrada,"1500,00"
+02/03/2026,Aluguel,Saída,"1200,00"
+05/03/2026,Marketing,Saída,"350,00"
+
+PODE SER DO TAMANHO QUE VOCE QUISER DESDE QUE SIGA ESSE MODELO
+PARA FINALIZAR SALVE COMO Arquivo de Valores Separados por Vírgulas do Microsoft Excel .CSV
