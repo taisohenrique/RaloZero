@@ -51,4 +51,98 @@ if uploaded_file:
         df = df[df['Categoria'] == cat_selecionada]
 
     # --- MÉTRICAS ---
-    total_
+    total_entrada = df[df['Tipo'] == 'Entrada']['Valor'].sum()
+    total_saida = df[df['Tipo'] == 'Saída']['Valor'].sum()
+    lucro = total_entrada - total_saida
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Faturamento Total", f"R$ {total_entrada:,.2f}")
+    c2.metric("Despesas Totais", f"R$ {total_saida:,.2f}")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.write(f"**Status do Lucro:** {'🟢 Saudável' if lucro > 0 else '🔴 Atenção'}")
+    c3.metric(
+        "Lucro Líquido", 
+        f"R$ {lucro:,.2f}", 
+        delta=f"R$ {lucro:,.2f}", 
+        delta_color="normal" if lucro >= 0 else "inverse"
+    )
+
+    st.markdown("---")
+
+    # --- GRÁFICOS ---
+    col_esq, col_dir = st.columns(2)
+
+    with col_esq:
+        st.subheader("📈 Evolução no Tempo")
+        fig_evolucao = px.line(
+            df.sort_values('Data'), 
+            x='Data', 
+            y='Valor', 
+            color='Tipo', 
+            markers=True, 
+            template="plotly_dark", 
+            color_discrete_map={"Entrada": "#00CC96", "Saída": "#EF553B"}
+        )
+        st.plotly_chart(fig_evolucao, use_container_width=True)
+
+    with col_dir:
+        st.subheader("🍕 Distribuição de Despesas")
+        df_saidas = df[df['Tipo'] == 'Saída']
+        if not df_saidas.empty:
+            fig_pizza = px.pie(df_saidas, values='Valor', names='Categoria', hole=0.5, template="plotly_dark")
+            st.plotly_chart(fig_pizza, use_container_width=True)
+        else:
+            st.warning("Nenhuma despesa registrada para os filtros selecionados.")
+
+    st.markdown("---")
+    
+    # --- TABELA DETALHADA ---
+    st.subheader("📋 Detalhamento dos Lançamentos")
+    
+    df_display = df.copy()
+    df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
+    
+    col_tab, col_btn = st.columns([4, 1])
+    
+    with col_tab:
+        st.dataframe(
+            df_display.sort_values(by="Data", ascending=False), 
+            use_container_width=True, 
+            hide_index=True
+        )
+
+    with col_btn:
+        st.write("###")
+        csv_ready = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar Dados (CSV)",
+            data=csv_ready,
+            file_name=f"relatorio_financeiro.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+else:
+    
+    st.info("👋 Bem-vindo! Por favor, suba sua planilha CSV na barra lateral para gerar os insights financeiros.")
+    st.markdown("---")
+    
+    col_texto, col_imagem = st.columns([1, 2])
+    
+    with col_texto:
+        st.subheader("📋 Instruções da Planilha")
+        st.markdown("""
+            Para o sistema funcionar, seu arquivo CSV deve ter estas colunas:
+            - **Data**: Ex: 15/03/2026
+            - **Categoria**: Ex: Aluguel, Vendas, Salários
+            - **Tipo**: Use apenas 'Entrada' ou 'Saída'
+            - **Valor**: Use números (ex: 1250.50)
+            
+            *Dica: Evite acentos nos cabeçalhos e não mescle células.*
+        """)
+        
+    with col_imagem:
+        st.subheader("🖼️ Exemplo do Formato Correto")
+        # Certifique-se de que o arquivo abaixo foi enviado via 'Upload' no GitHub
+        st.image("imagem_planilha.png", caption="Modelo de estrutura aceita pelo RaloZero", use_container_width=True)
