@@ -5,7 +5,7 @@ import plotly.express as px
 # Configuração de alto nível
 st.set_page_config(page_title="Gestão Financeira BlackBelt", layout="wide", page_icon="📊")
 
-# Custom CSS para melhorar a estética - AJUSTADO COM unsafe_allow_html=True
+# Custom CSS para melhorar a estética
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -19,9 +19,15 @@ uploaded_file = st.sidebar.file_uploader("Suba sua planilha (CSV)", type="csv")
 st.title("📊 Painel de Saúde Financeira")
 
 if uploaded_file:
-    # 1. Carregamento e Tratamento de Dados
-    df = pd.read_csv(uploaded_file)
-    df['Data'] = pd.to_datetime(df['Data'])
+    # --- 1. CARREGAMENTO COM TRATAMENTO DE ERROS (UTF-8 e LATIN-1) ---
+    try:
+        df = pd.read_csv(uploaded_file, encoding='utf-8', sep=None, engine='python')
+    except UnicodeDecodeError:
+        uploaded_file.seek(0)
+        df = pd.read_csv(uploaded_file, encoding='latin-1', sep=None, engine='python')
+    
+    # Converter Data garantindo o formato brasileiro
+    df['Data'] = pd.to_datetime(df['Data'], dayfirst=True)
     
     # --- BARRA LATERAL COM FILTROS ---
     st.sidebar.subheader("Filtros")
@@ -31,14 +37,15 @@ if uploaded_file:
     data_max = df['Data'].max().to_pydatetime()
     intervalo = st.sidebar.date_input("Selecione o período", [data_min, data_max])
 
-    # Filtro de Categoria
-    categorias = ["Todas"] + sorted(list(df['Categoria'].unique()))
+    # --- CORREÇÃO DO ERRO DE CATEGORIA (Sorted entre float/str) ---
+    # Remove valores nulos, converte tudo para string e ordena
+    categorias_unicas = df['Categoria'].dropna().astype(str).unique()
+    categorias = ["Todas"] + sorted(list(categorias_unicas))
     cat_selecionada = st.sidebar.selectbox("Filtrar por Categoria", categorias)
 
-    # Aplicação dos Filtros de Data (Garante que o intervalo tenha início e fim)
-    if isinstance(intervalo, list) or isinstance(intervalo, tuple):
-        if len(intervalo) == 2:
-            df = df[(df['Data'] >= pd.to_datetime(intervalo[0])) & (df['Data'] <= pd.to_datetime(intervalo[1]))]
+    # Aplicação dos Filtros de Data
+    if isinstance(intervalo, (list, tuple)) and len(intervalo) == 2:
+        df = df[(df['Data'] >= pd.to_datetime(intervalo[0])) & (df['Data'] <= pd.to_datetime(intervalo[1]))]
     
     # Aplicação do Filtro de Categoria
     if cat_selecionada != "Todas":
@@ -53,7 +60,6 @@ if uploaded_file:
     c1.metric("Faturamento Total", f"R$ {total_entrada:,.2f}")
     c2.metric("Despesas Totais", f"R$ {total_saida:,.2f}")
     
-    # Delta indica a cor: verde se positivo, vermelho se negativo
     st.sidebar.markdown("---")
     st.sidebar.write(f"**Status do Lucro:** {'🟢 Saudável' if lucro > 0 else '🔴 Atenção'}")
     c3.metric(
@@ -70,7 +76,6 @@ if uploaded_file:
 
     with col_esq:
         st.subheader("📈 Evolução no Tempo")
-        # Ordenamos os dados para a linha seguir a cronologia correta
         fig_evolucao = px.line(
             df.sort_values('Data'), 
             x='Data', 
@@ -93,10 +98,9 @@ if uploaded_file:
 
     st.markdown("---")
     
-    # --- TABELA DETALHADA (Formatada) ---
+    # --- TABELA DETALHADA ---
     st.subheader("📋 Detalhamento dos Lançamentos")
     
-    # Cópia para exibição (formatando data sem afetar os cálculos acima)
     df_display = df.copy()
     df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
     
@@ -124,6 +128,6 @@ else:
     st.info("👋 Bem-vindo! Por favor, suba sua planilha CSV na barra lateral para gerar os insights financeiros.")
     st.markdown("""
         **Como deve ser o seu arquivo CSV:**
-        - Colunas necessárias: `Data`, `Categoria`, `Tipo`, `Valor`
+        - Colunas: `Data`, `Categoria`, `Tipo`, `Valor`
         - Tipos aceitos: `Entrada` ou `Saída`
     """)
