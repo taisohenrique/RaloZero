@@ -32,3 +32,6 @@ Data,Categoria,Tipo,Valor
 
 PODE SER DO TAMANHO QUE VOCE QUISER DESDE QUE SIGA ESSE MODELO
 PARA FINALIZAR SALVE COMO Arquivo de Valores Separados por Vírgulas do Microsoft Excel .CSV
+
+### APP WEB FEITO ##
+https://ralozero-uj6qeaumdfzgadt9v7dqsu.streamlit.app/
